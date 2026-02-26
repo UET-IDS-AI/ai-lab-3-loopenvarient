@@ -52,8 +52,31 @@ def diabetes_linear_pipeline():
         test_r2,
         top_3_feature_indices (list length 3)
     """
-
-    raise NotImplementedError
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    model = LinearRegression()
+    model.fit(X_train_scaled, y_train)
+    
+    y_train_pred = model.predict(X_train_scaled)
+    y_test_pred = model.predict(X_test_scaled)
+    
+    train_mse = mean_squared_error(y_train, y_train_pred)
+    test_mse = mean_squared_error(y_test, y_test_pred)
+    train_r2 = r2_score(y_train, y_train_pred)
+    test_r2 = r2_score(y_test, y_test_pred)
+    
+    feature_importance = np.abs(model.coef_)
+    top_3_feature_indices = np.argsort(feature_importance)[::-1][:3]
+    
+    return train_mse, test_mse, train_r2, test_r2, top_3_feature_indices.tolist()
 
 
 # =========================================================
@@ -77,8 +100,21 @@ def diabetes_cross_validation():
         mean_r2,
         std_r2
     """
-
-    raise NotImplementedError
+    
+    data = load_diabetes()
+    X = data.data
+    y = data.target
+    
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    model = LinearRegression()
+    scores = cross_val_score(model, X_scaled, y, cv=5, scoring='r2')
+    
+    mean_r2 = scores.mean()
+    std_r2 = scores.std()
+    
+    return mean_r2, std_r2
 
 
 # =========================================================
@@ -110,9 +146,31 @@ def cancer_logistic_pipeline():
         recall,
         f1
     """
-
-    raise NotImplementedError
-
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
+    
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+    
+    model = LogisticRegression(max_iter=5000)
+    model.fit(X_train_scaled, y_train)
+    
+    y_train_pred = model.predict(X_train_scaled)
+    y_test_pred = model.predict(X_test_scaled)
+    
+    train_accuracy = accuracy_score(y_train, y_train_pred)
+    test_accuracy = accuracy_score(y_test, y_test_pred)
+    precision = precision_score(y_test, y_test_pred)
+    recall = recall_score(y_test, y_test_pred)
+    f1 = f1_score(y_test, y_test_pred)
+    
+    # A False Negative in medical diagnosis means that the test incorrectly indicates that a patient does not have a condition (e.g., cancer) when they actually do. This can lead to delayed treatment and worse outcomes for the patient.
+    
+    return train_accuracy, test_accuracy, precision, recall, f1
 
 # =========================================================
 # QUESTION 4 – Logistic Regularization Path
@@ -141,9 +199,38 @@ def cancer_logistic_regularization():
     RETURN:
         results_dictionary
     """
+    data = load_breast_cancer()
+    X = data.data
+    y = data.target
 
-    raise NotImplementedError
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, y, test_size=0.2, random_state=42
+    )
 
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    C_values = [0.01, 0.1, 1, 10, 100]
+    results_dictionary = {}
+
+    for C in C_values:
+        model = LogisticRegression(max_iter=5000, C=C)
+        model.fit(X_train_scaled, y_train)
+
+        train_acc = accuracy_score(
+            y_train, model.predict(X_train_scaled)
+        )
+        test_acc = accuracy_score(
+            y_test, model.predict(X_test_scaled)
+        )
+
+        results_dictionary[C] = (train_acc, test_acc)
+
+    # Small C → Strong regularization → Underfitting
+    # Large C → Weak regularization → Risk of overfitting
+
+    return results_dictionary
 
 # =========================================================
 # QUESTION 5 – Cross-Validation (Logistic Regression)
@@ -169,5 +256,14 @@ def cancer_cross_validation():
         mean_accuracy,
         std_accuracy
     """
-
-    raise NotImplementedError
+    data = load_breast_cancer()
+    X= data.data
+    y = data.target
+    scaler= StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    model = LogisticRegression(C=1, max_iter=5000)
+    scores = cross_val_score(model, X_scaled, y, cv=5, scoring='accuracy')
+    mean_accuracy = scores.mean()
+    std_accuracy = scores.std()
+    # Cross-validation is crucial in medical diagnosis to ensure that the model generalizes well to unseen data, which is critical for patient safety. It helps to detect overfitting and provides a more reliable estimate of model performance, especially when datasets are small or imbalanced.
+    return mean_accuracy, std_accuracy
